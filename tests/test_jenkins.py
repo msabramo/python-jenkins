@@ -2,7 +2,7 @@ import unittest
 
 from mock import patch
 
-from helper import jenkins
+from tests.helper import jenkins
 
 
 class JenkinsTest(unittest.TestCase):

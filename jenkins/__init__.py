@@ -213,7 +213,7 @@ class Jenkins(object):
         Print out job info in more readable format
         '''
         for k, v in self.get_job_info(job_name).iteritems():
-            print k, v
+            print(k, v)
 
     def jenkins_open(self, req, add_crumb=True):
         '''
@@ -227,7 +227,7 @@ class Jenkins(object):
             if add_crumb:
                 self.maybe_add_crumb(req)
             return urllib2.urlopen(req).read()
-        except urllib2.HTTPError, e:
+        except urllib2.HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
             if e.code in [401, 403, 500]:
