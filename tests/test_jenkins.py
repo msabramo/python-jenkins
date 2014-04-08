@@ -295,6 +295,149 @@ class JenkinsTest(unittest.TestCase):
                 'Could not parse JSON info for server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_copy_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob_2'}),
+            json.dumps({'name': 'TestJob_2'}),
+            json.dumps({'name': 'TestJob_2'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.copy_job(u'TestJob', u'TestJob_2')
+
+        self.assertTrue(j.job_exists('TestJob_2'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_copy_job__create_failed(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            None,
+            None,
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.copy_job(u'TestJob', u'TestJob_2')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'create[TestJob_2] failed')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_rename_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob_2'}),
+            json.dumps({'name': 'TestJob_2'}),
+            json.dumps({'name': 'TestJob_2'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.rename_job(u'TestJob', u'TestJob_2')
+
+        self.assertTrue(j.job_exists('TestJob_2'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_rename_job__rename_failed(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            None,
+            None,
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.rename_job(u'TestJob', u'TestJob_2')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'rename[TestJob_2] failed')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_delete_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            None,
+            None,
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.delete_job(u'TestJob')
+
+        self.assertFalse(j.job_exists('TestJob'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_delete_job__delete_failed(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.delete_job(u'TestJob')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'delete[TestJob] failed')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_enable_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.enable_job(u'TestJob')
+
+        self.assertTrue(j.job_exists('TestJob'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_disable_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.disable_job(u'TestJob')
+
+        self.assertTrue(j.job_exists('TestJob'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name(self, jenkins_mock):
         """
         The job name parameter specified should be urlencoded properly.
