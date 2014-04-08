@@ -639,8 +639,3 @@ class Jenkins(object):
         except HTTPError:
             raise JenkinsException('job[%s] number[%d] does not exist'
                                    % (name, number))
-        except ValueError:
-            raise JenkinsException(
-                'Could not parse JSON info for job[%s] number[%d]'
-                % (name, number)
-            )
