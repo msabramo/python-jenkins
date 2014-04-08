@@ -49,14 +49,14 @@ See examples at :doc:`example`
 try:
     # Python 2
     from urllib2 import Request, HTTPError, urlopen
-except ImportError:
+except ImportError:  #pragma: no cover
     # Python 3
     from urllib.request import Request, urlopen
     from urllib.error import HTTPError
 try:
     # Python 2
     from urllib import quote, urlencode
-except ImportError:
+except ImportError:  #pragma: no cover
     # Python 3
     from urllib.parse import quote, urlencode
 import base64
@@ -65,7 +65,7 @@ import json
 try:
     # Python 2
     from httplib import BadStatusLine
-except ImportError:
+except ImportError:  #pragma: no cover
     # Python 3
     from http.client import BadStatusLine
 
