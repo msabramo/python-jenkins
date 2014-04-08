@@ -11,12 +11,12 @@ class JenkinsTest(unittest.TestCase):
     def test_constructor(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXM=\n')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXM=\n')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXM=\n')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXM=\n')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com')
@@ -39,7 +39,7 @@ class JenkinsTest(unittest.TestCase):
     def test_maybe_add_crumb(self, jenkins_mock):
         jenkins_mock.return_value = False
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('/foo/bar')
+        request = jenkins.Request('http://example.com/job/TestJob')
 
         j.maybe_add_crumb(request)
 
