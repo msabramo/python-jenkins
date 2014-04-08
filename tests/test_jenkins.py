@@ -3,7 +3,7 @@ import unittest
 
 from mock import patch
 
-from tests.helper import jenkins
+from tests.helper import jenkins, StringIO
 
 
 class JenkinsTest(unittest.TestCase):
@@ -35,13 +35,39 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
                          u'http://example.com/job/Test%20Job/config.xml')
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    @patch('jenkins.urlopen')
     def test_maybe_add_crumb(self, jenkins_mock):
-        jenkins_mock.return_value = False
+        jenkins_mock.return_value = StringIO()
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         request = jenkins.Request('http://example.com/job/TestJob')
 
         j.maybe_add_crumb(request)
+
+    @patch('jenkins.urlopen')
+    def test_jenkins_open(self, jenkins_mock):
+        data = {'foo': 'bar'}
+        jenkins_mock.return_value = StringIO(json.dumps(data))
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        response = j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(response, json.dumps(data))
+
+    @patch('jenkins.urlopen')
+    def test_jenkins_open__403(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        try:
+            response = j.jenkins_open(request, add_crumb=False)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'Error in request.Possibly authentication failed [401]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info(self, jenkins_mock):
@@ -62,6 +88,50 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(build_info, build_info_to_return)
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
                          u'http://example.com/job/TestJob/52/api/json?depth=0')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_info__None(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = None
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_build_info(u'TestJob', number=52)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'job[TestJob] number[52] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_info__invalid_json(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = 'Invalid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_build_info(u'TestJob', number=52)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'Could not parse JSON info for job[TestJob] number[52]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_info__HTTPError(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob/api/json?depth=0',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_build_info(u'TestJob', number=52)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'job[TestJob] number[52] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info(self, jenkins_mock):
@@ -95,8 +165,8 @@ class JenkinsTest(unittest.TestCase):
         try:
             job_info = j.get_job_info(u'TestJob')
             self.fail("This should've failed with JenkinsException")
-        except jenkins.JenkinsException:
-            pass
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'job[TestJob] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info__invalid_json(self, jenkins_mock):
@@ -153,6 +223,23 @@ class JenkinsTest(unittest.TestCase):
                          u'http://example.com/job/TestJob/api/json?depth=0')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_jobs(self, jenkins_mock):
+        jobs = {
+            u'url': u'http://your_url_here/job/my_job/',
+            u'color': u'blue',
+            u'name': u'my_job',
+        }
+        job_info_to_return = {u'jobs': jobs}
+        jenkins_mock.return_value = json.dumps(job_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        job_info = j.get_jobs()
+
+        self.assertEqual(job_info, jobs)
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/api/json')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info(self, jenkins_mock):
         job_info_to_return = {
             u'jobs': {
@@ -169,6 +256,43 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
                          u'http://example.com/api/json')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_info__HTTPError(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob/api/json?depth=0',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_info()
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_info__BadStatusLine(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_info()
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_info__ValueError(self, jenkins_mock):
+        jenkins_mock.return_value = 'not valid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_info()
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'Could not parse JSON info for server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name(self, jenkins_mock):
