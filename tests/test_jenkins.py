@@ -44,13 +44,34 @@ class JenkinsTest(unittest.TestCase):
         j.maybe_add_crumb(request)
 
     @patch('jenkins.urlopen')
-    def test_jenkins_open(self, jenkins_mock):
-        data = {'foo': 'bar'}
-        jenkins_mock.return_value = StringIO(json.dumps(data))
+    def test_maybe_add_crumb__with_data(self, jenkins_mock):
+        crumb_data = {
+            "crumb": "dab177f483b3dd93483ef6716d8e792d",
+            "crumbRequestField": ".crumb",
+        }
+        jenkins_mock.return_value = StringIO(json.dumps(crumb_data))
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         request = jenkins.Request('http://example.com/job/TestJob')
 
-        response = j.jenkins_open(request, add_crumb=False)
+        j.maybe_add_crumb(request)
+
+        self.assertEqual(j.crumb, crumb_data)
+
+    @patch('jenkins.urlopen')
+    def test_jenkins_open(self, jenkins_mock):
+        crumb_data = {
+            "crumb": "dab177f483b3dd93483ef6716d8e792d",
+            "crumbRequestField": ".crumb",
+        }
+        data = {'foo': 'bar'}
+        jenkins_mock.side_effect = [
+            StringIO(json.dumps(crumb_data)),
+            StringIO(json.dumps(data)),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        response = j.jenkins_open(request)
         self.assertEqual(response, json.dumps(data))
 
     @patch('jenkins.urlopen')
@@ -105,6 +126,26 @@ class JenkinsTest(unittest.TestCase):
             self.assertEqual(
                 str(exc),
                 'job[TestJob] already exists')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_job__create_failed(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        config_xml = """<matrix-project><actions/><description>Foo</description></matrix-project>"""
+        jenkins_mock.side_effect = [
+            None,
+            None,
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.create_job(u'TestJob', config_xml)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'create[TestJob] failed')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_reconfig_job(self, jenkins_mock):
