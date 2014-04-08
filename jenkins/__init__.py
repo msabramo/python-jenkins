@@ -48,16 +48,17 @@ See examples at :doc:`example`
 #import sys
 try:
     # Python 2
-    from urllib2 import Request
+    from urllib2 import Request, HTTPError, urlopen
 except ImportError:
     # Python 3
-    from urllib.request import Request
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError
 try:
     # Python 2
-    from urllib import quote
+    from urllib import quote, urlencode
 except ImportError:
     # Python 3
-    from urllib.parse import quote
+    from urllib.parse import quote, urlencode
 import base64
 #import traceback
 import json
@@ -201,7 +202,7 @@ class Jenkins(object):
                 return json.loads(response)
             else:
                 raise JenkinsException('job[%s] does not exist' % name)
-        except urllib2.HTTPError:
+        except HTTPError:
             raise JenkinsException('job[%s] does not exist' % name)
         except ValueError:
             raise JenkinsException(
@@ -244,8 +245,8 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            return urllib2.urlopen(req).read()
-        except urllib2.HTTPError as e:
+            return urlopen(req).read()
+        except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
             if e.code in [401, 403, 500]:
@@ -280,7 +281,7 @@ class Jenkins(object):
             else:
                 raise JenkinsException('job[%s] number[%d] does not exist'
                                        % (name, number))
-        except urllib2.HTTPError:
+        except HTTPError:
             raise JenkinsException('job[%s] number[%d] does not exist'
                                    % (name, number))
         except ValueError:
@@ -333,7 +334,7 @@ class Jenkins(object):
         try:
             return json.loads(self.jenkins_open(
                 Request(self.server + INFO)))
-        except urllib2.HTTPError:
+        except HTTPError:
             raise JenkinsException("Error communicating with server[%s]"
                                    % self.server)
         except BadStatusLine:
@@ -471,10 +472,10 @@ class Jenkins(object):
             if token:
                 parameters['token'] = token
             return (self.server + BUILD_WITH_PARAMS_JOB % locals() +
-                    '?' + urllib.urlencode(parameters))
+                    '?' + urlencode(parameters))
         elif token:
             return (self.server + BUILD_JOB % locals() +
-                    '?' + urllib.urlencode({'token': token}))
+                    '?' + urlencode({'token': token}))
         else:
             return self.server + BUILD_JOB % locals()
 
@@ -514,7 +515,7 @@ class Jenkins(object):
                 return json.loads(response)
             else:
                 raise JenkinsException('node[%s] does not exist' % name)
-        except urllib2.HTTPError:
+        except HTTPError:
             raise JenkinsException('node[%s] does not exist' % name)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for node[%s]"
@@ -614,7 +615,7 @@ class Jenkins(object):
         }
 
         self.jenkins_open(Request(
-            self.server + CREATE_NODE % urllib.urlencode(params)))
+            self.server + CREATE_NODE % urlencode(params)))
 
         if not self.node_exists(name):
             raise JenkinsException('create[%s] failed' % (name))
@@ -635,7 +636,7 @@ class Jenkins(object):
             else:
                 raise JenkinsException('job[%s] number[%d] does not exist'
                                        % (name, number))
-        except urllib2.HTTPError:
+        except HTTPError:
             raise JenkinsException('job[%s] number[%d] does not exist'
                                    % (name, number))
         except ValueError:
