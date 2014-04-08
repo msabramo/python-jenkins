@@ -551,6 +551,170 @@ class JenkinsTest(unittest.TestCase):
                          u'http://example.com/queue/item/52/cancelQueue')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_delete_node(self, jenkins_mock):
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+            None,
+            None,
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.delete_node('test_node')
+
+        self.assertFalse(j.node_exists('test_node'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_delete_node__delete_failed(self, jenkins_mock):
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+            None,
+            json.dumps(node_info),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.delete_node('test_node')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'delete[test_node] failed')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_node(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+        }
+        jenkins_mock.side_effect = [
+            None,
+            None,
+            json.dumps(node_info),
+            json.dumps(node_info),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.create_node('test_node', exclusive=True)
+
+        self.assertTrue(j.node_exists('test_node'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_node__node_already_exists(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.create_node('test_node')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'node[test_node] already exists')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_node__create_failed(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+        }
+        jenkins_mock.side_effect = [
+            None,
+            None,
+            None,
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.create_node('test_node')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'create[test_node] failed')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_enable_node(self, jenkins_mock):
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+            'offline': True,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.enable_node('test_node')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_enable_node__offline_False(self, jenkins_mock):
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+            'offline': False,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.enable_node('test_node')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_disable_node(self, jenkins_mock):
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+            'offline': False,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.disable_node('test_node')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_disable_node__offline_True(self, jenkins_mock):
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+            'offline': True,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.disable_node('test_node')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_queue_info(self, jenkins_mock):
         """
         The job name parameter specified should be urlencoded properly.
