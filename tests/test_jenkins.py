@@ -70,6 +70,144 @@ class JenkinsTest(unittest.TestCase):
             self.assertEqual(str(exc), 'Error in request.Possibly authentication failed [401]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        config_xml = """<matrix-project><actions/><description>Foo</description></matrix-project>"""
+        jenkins_mock.side_effect = [
+            None,
+            None,
+            json.dumps({'name': 'TestJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.create_job(u'TestJob', config_xml)
+
+        self.assertEqual(jenkins_mock.call_args_list[1][0][0].get_full_url(),
+                         'http://example.com/createItem?name=TestJob')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_job__already_exists(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        config_xml = """<matrix-project><actions/><description>Foo</description></matrix-project>"""
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.create_job(u'TestJob', config_xml)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'job[TestJob] already exists')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_reconfig_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        config_xml = """<matrix-project><actions/><description>Foo</description></matrix-project>"""
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.reconfig_job(u'TestJob', config_xml)
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/TestJob/config.xml')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_build_job(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            {'foo': 'bar'},
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.build_job(u'TestJob')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/TestJob/build')
+        self.assertEqual(build_info, {'foo': 'bar'})
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_build_job__with_token(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            {'foo': 'bar'},
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.build_job(u'TestJob', token='some_token')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/TestJob/build?token=some_token')
+        self.assertEqual(build_info, {'foo': 'bar'})
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_build_job__with_parameters_and_token(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            {'foo': 'bar'},
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.build_job(
+            u'TestJob',
+            parameters={'when': 'now', 'why': 'because I felt like it'},
+            token='some_token')
+
+        self.assertTrue('token=some_token' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertTrue('when=now' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertEqual(build_info, {'foo': 'bar'})
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_build_job__job_doesnt_exist(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = [
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            build_info = j.build_job(u'TestJob')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'no such job[TestJob]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_stop_build(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.stop_build(u'TestJob', number=52)
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/TestJob/52/stop')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output(self, jenkins_mock):
         """
         The job name parameter specified should be urlencoded properly.
@@ -549,6 +687,50 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
                          u'http://example.com/queue/item/52/cancelQueue')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_node_info(self, jenkins_mock):
+        node_info = {
+            'displayName': 'nodes',
+            'totalExecutors': 5,
+        }
+        jenkins_mock.side_effect = [
+            json.dumps(node_info),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        self.assertEqual(j.get_node_info('test_node'), node_info)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_node_info__invalid_json(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            'Invalid JSON',
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_node_info('test_node')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'Could not parse JSON info for node[test_node]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_node_info__HTTPError(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            j.get_node_info('test_node')
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(
+                str(exc),
+                'node[test_node] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_node(self, jenkins_mock):
