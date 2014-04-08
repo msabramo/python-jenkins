@@ -6,3 +6,5 @@ MANIFEST
 __pycache__
 build
 dist
+.coverage
+coverage.xml
