@@ -70,6 +70,64 @@ class JenkinsTest(unittest.TestCase):
             self.assertEqual(str(exc), 'Error in request.Possibly authentication failed [401]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = "build console output..."
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.get_build_console_output(u'TestJob', number=52)
+
+        self.assertEqual(build_info, jenkins_mock.return_value)
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/TestJob/52/consoleText')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output__None(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = None
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            build_info = j.get_build_console_output(u'TestJob', number=52)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'job[TestJob] number[52] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output__invalid_json(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = 'Invalid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            build_info = j.get_build_console_output(u'TestJob', number=52)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'job[TestJob] number[52] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output__HTTPError(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob/52/consoleText',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            build_info = j.get_build_console_output(u'TestJob', number=52)
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'job[TestJob] number[52] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info(self, jenkins_mock):
         """
         The job name parameter specified should be urlencoded properly.
