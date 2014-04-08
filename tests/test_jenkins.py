@@ -590,9 +590,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_node(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         node_info = {
             'displayName': 'nodes',
             'totalExecutors': 5,
@@ -611,9 +608,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_node__node_already_exists(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         node_info = {
             'displayName': 'nodes',
             'totalExecutors': 5,
@@ -632,9 +626,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_node__create_failed(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         node_info = {
             'displayName': 'nodes',
             'totalExecutors': 5,
@@ -716,9 +707,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_queue_info(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         queue_info_to_return = {
             'items': {
                 u'task': {
