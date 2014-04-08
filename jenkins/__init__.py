@@ -231,7 +231,7 @@ class Jenkins(object):
         '''
         Print out job info in more readable format
         '''
-        for k, v in self.get_job_info(job_name).iteritems():
+        for k, v in self.get_job_info(job_name).items():
             print(k, v)
 
     def jenkins_open(self, req, add_crumb=True):
