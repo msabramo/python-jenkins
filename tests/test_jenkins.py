@@ -84,6 +84,75 @@ class JenkinsTest(unittest.TestCase):
                          u'http://example.com/job/TestJob/api/json?depth=0')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_info__None(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = None
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # Note that if we commit to pytest, we can use pytest.raises here...
+        try:
+            job_info = j.get_job_info(u'TestJob')
+            self.fail("This should've failed with JenkinsException")
+        except jenkins.JenkinsException:
+            pass
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_info__invalid_json(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = 'Invalid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # Note that if we commit to pytest, we can use pytest.raises here...
+        try:
+            job_info = j.get_job_info(u'TestJob')
+            self.fail("This should've failed with JenkinsException")
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'Could not parse JSON info for job[TestJob]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_info__HTTPError(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob/api/json?depth=0',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # Note that if we commit to pytest, we can use pytest.raises here...
+        try:
+            job_info = j.get_job_info(u'TestJob')
+            self.fail("This should've failed with JenkinsException")
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), 'job[TestJob] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_debug_job_info(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        job_info_to_return = {
+            u'building': False,
+            u'msg': u'test',
+            u'revision': 66,
+            u'user': u'unknown'
+        }
+        jenkins_mock.return_value = json.dumps(job_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.debug_job_info(u'TestJob')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/TestJob/api/json?depth=0')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info(self, jenkins_mock):
         job_info_to_return = {
             u'jobs': {
@@ -115,6 +184,35 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(job_name, 'TestJob')
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
                          u'http://example.com/job/TestJob/api/json?tree=name')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_name__None(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = None
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        job_name = j.get_job_name(u'TestJob')
+
+        self.assertEqual(job_name, None)
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/TestJob/api/json?tree=name')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_name__unexpected_job_name(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        job_name_to_return = {u'name': 'not the right name'}
+        jenkins_mock.return_value = json.dumps(job_name_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        try:
+            job_name = j.get_job_name(u'TestJob')
+            self.fail("This should've failed with JenkinsException")
+        except jenkins.JenkinsException as exc:
+            self.assertEqual(str(exc), "Jenkins returned an unexpected job name")
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_cancel_queue(self, jenkins_mock):
